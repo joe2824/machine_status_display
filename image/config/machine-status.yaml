@@ -1,0 +1,19 @@
+include:
+  file: trixie-minbase.yaml
+
+device:
+  # rpi4 = BCM2711 — works for Pi 3B/3B+/4/CM4 (arm_64bit=1 added for Pi 3 in layer)
+  # For Pi 5 (BCM2712) change to: layer: rpi5
+  layer: rpi4
+  hostname: machine-status
+  user1: msd
+  user1passhash: "$6$g/IdBIIXUAsLcFDM$qT5QQDWltU3Q2xUW3GkMyXPVGbU7a/GShLo26ybBg6RLKq4rRyIaHWfxXXhqM46OFHxkSpHBi6a34njY5Mq721"
+
+image:
+  # image-rpios: MBR + ext4, works on Pi 3B through Pi 4/CM4 without AB slot mechanism
+  root_part_size: 4000M
+  name: machine-status-display
+
+layer:
+  app: machine-status
+  audit: sbom-base

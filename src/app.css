@@ -1,0 +1,223 @@
+@import "tailwindcss";
+
+@theme {
+  /* ── Surfaces ── */
+  --color-base: #0a0a0f;
+  --color-card: #12121a;
+  --color-card-hover: #14142a;
+  --color-overlay: #0f0f1a;
+  --color-dialog: #12121e;
+
+  /* ── Borders ── */
+  --color-rim: #1e1e2e;
+  --color-stroke: #252535;
+  --color-highlight: #3b4a6b;
+
+  /* ── Text ── */
+  --color-ink: #f0f0f8;
+  --color-muted: #60607a;
+  --color-dim: #404055;
+  --color-key: #e0e0f0;
+
+  /* ── Status ── */
+  --color-ok: #4ade80;
+  --color-partial: #fbbf24;
+  --color-danger: #f87171;
+  --color-accent: #818cf8;
+}
+
+/* ── Container-query card sizing ── */
+@layer utilities {
+  .cq-size {
+    container-type: size;
+  }
+
+  .text-cq-nummer {
+    font-size: clamp(1.2rem, 10cqmin, 14rem);
+  }
+  .text-cq-badge {
+    font-size: clamp(0.7rem, 3.8cqmin, 3.2rem);
+  }
+  .text-cq-status {
+    font-size: clamp(0.55rem, 2.8cqmin, 2.2rem);
+  }
+  .text-cq-edit {
+    font-size: clamp(0.7rem, 2.5cqmin, 2rem);
+  }
+  .text-cq-media-label {
+    font-size: clamp(0.35rem, 1.5cqmin, 1.2rem);
+  }
+  .text-cq-add-icon {
+    font-size: clamp(2rem, 12cqmin, 15rem);
+  }
+  .text-cq-add-label {
+    font-size: clamp(0.6rem, 3cqmin, 3rem);
+  }
+
+  .p-cq {
+    padding: clamp(0.6rem, 3cqmin, 4rem);
+  }
+  .gap-cq {
+    gap: clamp(0.2rem, 1.2cqmin, 2rem);
+  }
+  .gap-cq-status {
+    gap: clamp(0.15rem, 0.8cqmin, 1.2rem);
+  }
+  .gap-cq-row {
+    gap: clamp(0.3rem, 1.5cqmin, 2rem);
+  }
+  .gap-cq-media {
+    gap: clamp(0.4rem, 2cqmin, 3rem);
+  }
+  .size-cq-icon {
+    width: clamp(0.8rem, 3.5cqmin, 3.5rem);
+    height: clamp(0.8rem, 3.5cqmin, 3.5rem);
+  }
+
+  /* ── OSK sizing ── */
+  .osk-text {
+    font-size: clamp(0.65rem, 1.8vh, 1.3rem);
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .osk-preview-text {
+    font-size: clamp(0.9rem, 2.5vh, 1.8rem);
+  }
+  .osk-preview-label {
+    font-size: clamp(0.6rem, 1.5vh, 1rem);
+  }
+  .osk-key-pad {
+    padding: clamp(0.3rem, 0.9vh, 0.9rem) clamp(0.4rem, 0.9vw, 1.2rem);
+  }
+  .osk-key-min-w {
+    min-width: clamp(1.8rem, 4.5vw, 4.5rem);
+  }
+  .osk-numpad-min-w {
+    min-width: clamp(3.5rem, 8vw, 8rem);
+  }
+  .osk-shift-min-w {
+    min-width: clamp(2.5rem, 6vw, 6rem);
+  }
+  .osk-bs-min-w {
+    min-width: clamp(3rem, 7vw, 7rem);
+  }
+  .osk-enter-min-w {
+    min-width: clamp(4rem, 10vw, 10rem);
+  }
+  .osk-preview-min-h {
+    min-height: clamp(2rem, 5vh, 4rem);
+  }
+  .osk-gap {
+    gap: clamp(0.2rem, 0.6vh, 0.6rem);
+  }
+  .osk-row-gap {
+    gap: clamp(0.15rem, 0.4vw, 0.5rem);
+  }
+  .osk-pad {
+    padding: clamp(0.4rem, 1vh, 1rem) clamp(0.4rem, 1vw, 1rem);
+    touch-action: manipulation;
+  }
+
+  /* ── Media status tiles ── */
+  .text-cq-tile-label {
+    font-size: clamp(0.45rem, 2.2cqmin, 1.8rem);
+  }
+  .size-cq-tile-icon {
+    width: clamp(2rem, 11cqmin, 14rem);
+    height: clamp(2rem, 11cqmin, 14rem);
+  }
+  .p-cq-tile {
+    padding: clamp(0.4rem, 2cqmin, 2.5rem) clamp(0.3rem, 1.2cqmin, 1.8rem);
+  }
+  .gap-cq-tiles {
+    gap: clamp(0.2rem, 0.8cqmin, 1.2rem);
+  }
+
+  /* Meta row (responsible / timestamp) — stays readable at 4-machine grid */
+  .text-cq-meta {
+    font-size: clamp(0.75rem, 2.8cqmin, 2rem);
+  }
+  /* SVG icon sizes matching text utilities */
+  .size-cq-meta {
+    width: clamp(0.75rem, 2.8cqmin, 2rem);
+    height: clamp(0.75rem, 2.8cqmin, 2rem);
+  }
+  .size-cq-nh {
+    width: clamp(0.65rem, 3.2cqmin, 3rem);
+    height: clamp(0.65rem, 3.2cqmin, 3rem);
+  }
+  .size-cq-status {
+    width: clamp(0.55rem, 2.8cqmin, 2.2rem);
+    height: clamp(0.55rem, 2.8cqmin, 2.2rem);
+  }
+
+  /* ── Not-Halt bar ── */
+  .text-cq-nh {
+    font-size: clamp(0.65rem, 3.2cqmin, 3rem);
+  }
+  .p-cq-nh {
+    padding: clamp(0.35rem, 1.8cqmin, 2.5rem) clamp(0.5rem, 2.5cqmin, 3.5rem);
+  }
+  .gap-cq-nh {
+    gap: clamp(0.3rem, 1.5cqmin, 2rem);
+  }
+
+  /* ── Grid viewport sizing ── */
+  .grid-gutter {
+    gap: clamp(0.3rem, 0.5vmin, 0.8rem);
+    padding: clamp(0.3rem, 0.5vmin, 0.8rem);
+  }
+  /* Equal-height auto rows (use with h-screen grid) */
+  .auto-rows-fr {
+    grid-auto-rows: 1fr;
+  }
+}
+
+/* ── ACHTUNG pulse animation ── */
+@keyframes achtung-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+.animate-achtung {
+  animation: achtung-pulse 0.85s ease-in-out infinite;
+}
+
+/* ── Reset ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--color-base);
+  color: var(--color-ink);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+}
+
+#svelte {
+  height: 100%;
+  width: 100%;
+}
+
+input,
+textarea {
+  user-select: text;
+}
+
+button, [role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}

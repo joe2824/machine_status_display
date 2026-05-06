@@ -1,0 +1,177 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: ubuntu-24.04-arm
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            wget \
+            file \
+            libssl-dev \
+            librsvg2-dev \
+            xdg-utils
+
+      - name: Install frontend dependencies
+        run: npm install
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Machine Status Display ${{ github.ref_name }}'
+          releaseBody: |
+            ## Machine Status Display ${{ github.ref_name }}
+
+            Industrial machine status dashboard — Tauri desktop app for Linux (x86_64 + arm64).
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+
+  rpi-image:
+    name: Build Raspberry Pi Image
+    needs: build
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install rpi-image-gen + build tools
+        run: |
+          git clone --depth=1 https://github.com/raspberrypi/rpi-image-gen.git /tmp/rpi-image-gen
+          cd /tmp/rpi-image-gen && sudo ./install_deps.sh
+          sudo apt-get install -y --no-install-recommends imagemagick xz-utils
+
+      - name: Copy custom layer + service template
+        run: |
+          mkdir -p /tmp/rpi-image-gen/layer/app
+          cp image/layer/machine-status.yaml /tmp/rpi-image-gen/layer/app/machine-status.yaml
+          cp image/kiosk.service.tpl /tmp/rpi-image-gen/
+
+      - name: Download app .deb from this release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --pattern "*_arm64.deb" \
+            --output /tmp/rpi-image-gen/machine-status-display_arm64.deb
+
+      - name: Build image
+        working-directory: /tmp/rpi-image-gen
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ./rpi-image-gen build -c "${{ github.workspace }}/image/config/machine-status.yaml"
+
+      - name: Fix boot partition (root=, disable_splash)
+        run: |
+          IMG=$(find /tmp/rpi-image-gen/work -name 'machine-status-display.img' | head -1)
+          LOOP=$(sudo losetup --show -fP "$IMG")
+          sudo kpartx -as "$LOOP"
+          LOOPN="${LOOP##*/}"
+          sudo mkdir -p /mnt/msd-bootfix
+          sudo mount "/dev/mapper/${LOOPN}p1" /mnt/msd-bootfix
+          if [ -f /mnt/msd-bootfix/cmdline.txt ]; then
+            sudo sed -i 's|root=/dev/disk/by-slot/system|root=LABEL=ROOT rootfstype=ext4|g' /mnt/msd-bootfix/cmdline.txt
+            sudo sed -i -e 's/ fullscreen_logo=1//g' \
+                        -e 's/ fullscreen_logo_name=[^ ]*//g' \
+                        -e 's/ vt\.global_cursor_default=0//g' \
+                        /mnt/msd-bootfix/cmdline.txt
+            echo "cmdline.txt: $(cat /mnt/msd-bootfix/cmdline.txt)"
+          fi
+          if [ -f /mnt/msd-bootfix/config.txt ]; then
+            sudo sed -i '/fullscreen_logo/d; /logo\.tga/d' /mnt/msd-bootfix/config.txt
+            grep -q 'disable_splash' /mnt/msd-bootfix/config.txt \
+              || sudo sed -i '/^\[all\]/a disable_splash=1' /mnt/msd-bootfix/config.txt
+          fi
+          sudo umount /mnt/msd-bootfix
+          sudo mkdir -p /mnt/msd-rootfix
+          sudo mount "/dev/mapper/${LOOPN}p2" /mnt/msd-rootfix
+          if [ -f /mnt/msd-rootfix/etc/fstab ]; then
+            sudo sed -i \
+              -e 's|/dev/disk/by-slot/system|LABEL=ROOT|g' \
+              -e 's|/dev/disk/by-slot/boot|LABEL=BOOT|g' \
+              /mnt/msd-rootfix/etc/fstab
+            echo "fstab: $(grep -v '^#' /mnt/msd-rootfix/etc/fstab | grep -v '^$')"
+          fi
+          sudo umount /mnt/msd-rootfix
+          sudo kpartx -d "$LOOP"
+          sudo losetup -d "$LOOP"
+
+      - name: Generate CVE report from SBOM
+        run: |
+          SBOM=$(find /tmp/rpi-image-gen/work -name "*.sbom" | head -1)
+          if [[ -n "$SBOM" ]]; then
+            echo "SBOM_PATH=$SBOM" >> "$GITHUB_ENV"
+            curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh \
+              | sh -s -- -b /usr/local/bin
+            grype "sbom:$SBOM" -o table > cve-report.txt
+            grype "sbom:$SBOM" -o json  > cve-report.json
+            echo "CVE report:"
+            cat cve-report.txt
+          else
+            echo "No SBOM found, skipping CVE report"
+            touch cve-report.txt cve-report.json
+          fi
+
+      - name: Compress and upload release assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Compress image with multithreaded xz
+          IMG=$(find /tmp/rpi-image-gen/work -name "machine-status-display.img" | head -1)
+          xz -T0 "$IMG"
+          mv "${IMG}.xz" raspi-machine-status-display.img.xz
+
+          # Copy SBOM with clean name
+          SBOM_PATH="${SBOM_PATH:-}"
+          UPLOAD_ARGS=( raspi-machine-status-display.img.xz )
+          if [[ -n "$SBOM_PATH" ]]; then
+            cp "$SBOM_PATH" machine-status-display.spdx.json
+            UPLOAD_ARGS+=( machine-status-display.spdx.json )
+          fi
+          [[ -s cve-report.txt ]]  && UPLOAD_ARGS+=( cve-report.txt )
+          [[ -s cve-report.json ]] && UPLOAD_ARGS+=( cve-report.json )
+
+          gh release upload "${{ github.ref_name }}" "${UPLOAD_ARGS[@]}" --clobber

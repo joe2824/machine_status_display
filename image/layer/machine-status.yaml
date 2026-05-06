@@ -1,0 +1,209 @@
+# METABEGIN
+# X-Env-Layer-Name: machine-status
+# X-Env-Layer-Category: app
+# X-Env-Layer-Desc: Machine Status Display kiosk — Wayland/cage autostart
+# X-Env-Layer-Version: 1.0.0
+# X-Env-Layer-Requires: rpi-user-credentials,systemd-net-min
+# METAEND
+---
+mmdebstrap:
+  packages:
+    # Wayland kiosk compositor
+    - cage
+    # chvt — explicit VT activation after cage starts (logind session activation, mouse fix)
+    - kbd
+    # Tauri 2 runtime (minimum per tauri.app/distribute/debian)
+    - libwebkit2gtk-4.1-0
+    - libgtk-3-0
+    # WebKit sandbox — only Recommended by libwebkit2gtk, not in minbase
+    # Without these WebKit content process crashes instantly on startup
+    - bubblewrap
+    - xdg-dbus-proxy
+    # Fonts — WebKit crashes on first text render without at least one font family
+    - fonts-dejavu-core
+    - fontconfig
+    # TLS certificates — required for HTTPS OTA update checks (GitHub API)
+    - ca-certificates
+    # SSH + mDNS — remote debugging: ssh msd@machine-status.local
+    - openssh-server
+    - avahi-daemon
+    # envsubst for kiosk service template substitution
+    - gettext-base
+    # D-Bus — required for WebKitGTK multi-process IPC
+    - dbus
+    # seatd — seat manager; runs as root (-g video), grants DRM/input to cage via libseat
+    # Auto-detected by libseat since socket is accessible to video group (msd is in video)
+    - seatd
+
+  customize-hooks:
+    - |
+      # Install Machine Status Display ARM64 .deb
+      # .deb must be staged at $IGROOT/machine-status-display_arm64.deb before build
+      LOCAL_DEB="$IGROOT/machine-status-display_arm64.deb"
+      if [ ! -f "$LOCAL_DEB" ]; then
+        echo "ERROR: $LOCAL_DEB not found — stage the .deb before running rpi-image-gen"
+        exit 1
+      fi
+      cp "$LOCAL_DEB" /tmp/msd.deb
+      dpkg --root="$1" -i /tmp/msd.deb
+      rm /tmp/msd.deb
+
+    - |
+      # Install systemd kiosk service
+      export KIOSK_USER="$IGconf_device_user1"
+      export KIOSK_RUNDIR="/run/user/$(id -u "$IGconf_device_user1" 2>/dev/null || echo 1000)"
+      envsubst < kiosk.service.tpl > "$1/etc/systemd/system/machine-status.service"
+
+    - $BDEBSTRAP_HOOKS/enable-units "$1" machine-status
+    - $BDEBSTRAP_HOOKS/enable-units "$1" ssh avahi-daemon
+
+    - |
+      # Mask getty@tty1 — kiosk owns tty1 exclusively
+      systemctl --root="$1" mask getty@tty1.service
+
+      # Mask network wait-online — kiosk has no hard network boot dependency
+      systemctl --root="$1" mask systemd-networkd-wait-online.service
+
+      # Bluetooth modules are blacklisted; mask the service too
+      systemctl --root="$1" mask bluetooth.service
+
+      # No auto-updates on a fixed-function kiosk
+      systemctl --root="$1" mask apt-daily.timer apt-daily-upgrade.timer \
+        apt-daily.service apt-daily-upgrade.service
+
+      # No man page cache rebuilds or dpkg backups needed
+      systemctl --root="$1" mask man-db.timer dpkg-db-backup.timer 2>/dev/null || true
+
+      # No background ext4 scrubbing needed
+      systemctl --root="$1" mask e2scrub_all.timer e2scrub_reap.service 2>/dev/null || true
+
+      # Add kiosk user to required groups — done individually to avoid atomic failure
+      # if any single group doesn't exist yet (e.g. seat created by seatd postinst)
+      chroot "$1" getent group seat >/dev/null 2>&1 || chroot "$1" groupadd -r seat
+      for _g in video input render tty seat; do
+        chroot "$1" usermod -aG "$_g" "$IGconf_device_user1" 2>/dev/null || \
+          echo "Warning: could not add $IGconf_device_user1 to group $_g"
+      done
+
+      # Create XDG_RUNTIME_DIR at boot via tmpfiles.d.
+      # No PAMName used — tmpfiles.d guarantees the dir exists before cage starts.
+      printf 'd /run/user/1000 0700 msd msd -\n' \
+        > "$1/etc/tmpfiles.d/msd-runtime-dir.conf"
+
+    - |
+      # Update installer script — runs outside machine-status.service cgroup via systemd-run
+      # so it survives the service stop/start cycle during update.
+      mkdir -p "$1/usr/local/sbin"
+      MSDSCRIPT="$1/usr/local/sbin/msd-update.sh"
+      cat << 'EOF' > "$MSDSCRIPT"
+      #!/bin/sh
+      DEB="$1"
+      TTY=/dev/tty1
+
+      say() { echo "$*" > "$TTY"; }
+      clear_tty() { printf "\033[2J\033[H" > "$TTY"; }
+
+      sleep 2
+      systemctl stop machine-status 2>/dev/null
+
+      clear_tty
+      say ""
+      say "  ══════════════════════════════════════════════"
+      say "   Machine Status Display — Update"
+      say "  ══════════════════════════════════════════════"
+      say ""
+      say "  File: $(basename "$DEB")"
+      say ""
+      say "  Backing up current version..."
+      if cp /usr/bin/machine_status_display /usr/bin/machine_status_display.bak 2>/dev/null; then
+          say "  Backup created"
+      else
+          say "  No backup possible"
+      fi
+      say ""
+      say "  Installing..."
+      say ""
+      if dpkg -i "$DEB" >> "$TTY" 2>&1; then
+          say ""
+          say "  Installation successful."
+          say ""
+          say "  Restarting application..."
+          sleep 1
+          systemctl start machine-status
+      else
+          say ""
+          say "  Installation failed — Rollback..."
+          say ""
+          if [ -f /usr/bin/machine_status_display.bak ]; then
+              cp /usr/bin/machine_status_display.bak /usr/bin/machine_status_display
+              say "  Old version restored."
+          fi
+          sleep 4
+          systemctl start machine-status
+      fi
+      EOF
+      chmod 755 "$MSDSCRIPT"
+
+      # sudoers: allow systemd-run to launch the update script as root
+      printf '%s ALL=(ALL) NOPASSWD: /usr/bin/systemd-run, /usr/local/sbin/msd-update.sh\n' \
+        "$IGconf_device_user1" \
+        >> "$1/etc/sudoers.d/machine-status-update"
+      chmod 440 "$1/etc/sudoers.d/machine-status-update"
+
+    - |
+      # USB auto-mount for update .deb detection
+      # SUBSYSTEMS=="usb" walks device tree (reliable on minimal Debian, no usb_id needed)
+      # DEVTYPE=="partition" skips whole-disk nodes (sda vs sda1)
+      # Mounts to /media/%k (e.g. /media/sda1) — scanner finds via /proc/mounts
+      mkdir -p "$1/etc/udev/rules.d"
+      mkdir -p "$1/media"
+      printf 'ACTION=="add",    SUBSYSTEM=="block", SUBSYSTEMS=="usb", ENV{DEVTYPE}=="partition", RUN+="/usr/bin/systemd-mount --no-block --collect %%N /media/%%k"\n' \
+        > "$1/etc/udev/rules.d/99-usb-automount.rules"
+      printf 'ACTION=="remove", SUBSYSTEM=="block", SUBSYSTEMS=="usb", ENV{DEVTYPE}=="partition", RUN+="/usr/bin/systemd-umount --no-block /media/%%k"\n' \
+        >> "$1/etc/udev/rules.d/99-usb-automount.rules"
+
+    - |
+      # Suppress cgroup BPF warning (RPi kernel lacks this feature — harmless)
+      mkdir -p "$1/etc/systemd/system.conf.d"
+      printf '[Manager]\nDefaultCPUAccounting=no\nDefaultMemoryAccounting=no\nDefaultIOAccounting=no\n' \
+        > "$1/etc/systemd/system.conf.d/no-cgroup-accounting.conf"
+
+    - |
+      # Blacklist Bluetooth — kiosk has no use for BT, prevents BCM boot messages
+      mkdir -p "$1/etc/modprobe.d"
+      printf 'blacklist bluetooth\nblacklist btbcm\nblacklist hci_uart\nblacklist btintel\n' \
+        > "$1/etc/modprobe.d/no-bluetooth.conf"
+
+    - |
+      # Journal log rotation: 50 MB cap, 7-day retention
+      mkdir -p "$1/etc/systemd/journald.conf.d"
+      printf '[Journal]\nSystemMaxUse=50M\nSystemKeepFree=50M\nMaxRetentionSec=7day\nMaxFileSec=1day\n' \
+        > "$1/etc/systemd/journald.conf.d/size-limit.conf"
+
+  cleanup-hooks:
+    - |
+      # Boot partition patches — cleanup-hooks run after all customize-hooks.
+      # Note: cmdline.txt root= fix is a no-op here (value is ROOTDEV at this stage;
+      # setup.sh injects /dev/disk/by-slot/system during image assembly, then our
+      # post-build step in build-image-local.sh/release.yml replaces it with LABEL=ROOT).
+      # console=tty1 and quiet ARE applied here and persist through image assembly.
+      BOOT="$1/boot/firmware"
+      [ -d "$BOOT" ] || BOOT="$1/boot"
+
+      if [ -f "$BOOT/config.txt" ]; then
+        sed -i 's/dtparam=audio=on/dtparam=audio=off/' "$BOOT/config.txt"
+        # Pi 3B and Zero 2 W require arm_64bit=1 to run 64-bit kernel
+        grep -q 'arm_64bit' "$BOOT/config.txt" \
+          || printf '\n[pi3]\narm_64bit=1\n\n[pi02]\narm_64bit=1\n' >> "$BOOT/config.txt"
+        # Suppress rainbow GPU test pattern on boot
+        grep -q 'disable_splash' "$BOOT/config.txt" \
+          || sed -i '/^\[all\]/a disable_splash=1' "$BOOT/config.txt"
+      fi
+
+      if [ -f "$BOOT/cmdline.txt" ]; then
+        grep -q 'console=tty1' "$BOOT/cmdline.txt" \
+          || sed -i 's/^/console=tty1 /' "$BOOT/cmdline.txt"
+        grep -q '\bquiet\b' "$BOOT/cmdline.txt" \
+          || sed -i 's/^/quiet /' "$BOOT/cmdline.txt"
+        echo "cmdline.txt after cleanup-hook: $(cat $BOOT/cmdline.txt)"
+      fi
