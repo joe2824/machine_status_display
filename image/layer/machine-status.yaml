@@ -198,6 +198,9 @@ mmdebstrap:
         # Suppress rainbow GPU test pattern on boot
         grep -q 'disable_splash' "$BOOT/config.txt" \
           || sed -i '/^\[all\]/a disable_splash=1' "$BOOT/config.txt"
+        # Pi 3B USB EPROTO (-71): LAN9514 shared USB/Ethernet chip needs higher current limit
+        grep -q 'max_usb_current' "$BOOT/config.txt" \
+          || printf '\nmax_usb_current=1\n' >> "$BOOT/config.txt"
       fi
 
       if [ -f "$BOOT/cmdline.txt" ]; then
