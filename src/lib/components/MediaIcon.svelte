@@ -1,7 +1,7 @@
 <script lang="ts">
   let { de = '', en = '', class: cls = '' }: { de?: string; en?: string; class?: string } = $props();
 
-  type IconKind = 'air' | 'power' | 'nitrogen' | 'water' | 'coolwater' | 'steam' | 'hydraulic' | 'vacuum' | 'oxygen' | 'hotwater' | 'wrench';
+  type IconKind = 'air' | 'power' | 'nitrogen' | 'water' | 'coolwater' | 'steam' | 'hydraulic' | 'vacuum' | 'oxygen' | 'ozone' | 'hotwater' | 'wrench';
 
   function classify(d: string, e: string): IconKind {
     const s = (d + ' ' + e).toLowerCase();
@@ -15,6 +15,7 @@
         s.includes('elec')   || s.includes('volt'))                                   return 'power';
     if (s.includes('stick')  || s.includes('nitro') || s.includes('n2') ||
         s.includes('n₂')     || s.includes('inert'))                                  return 'nitrogen';
+    if (s.includes('ozon') || s.includes('ozone') || s.includes('o₃'))               return 'ozone';
     if (s.includes('sauerstoff') || s.includes('oxygen') || s.includes(' o2') || s.includes('o₂'))
                                                                                       return 'oxygen';
     if (s.includes('heiß')   || s.includes('heiss') || s.includes('hot water'))      return 'hotwater';
@@ -37,10 +38,11 @@
   aria-hidden="true"
 >
   {#if kind === 'air'}
-    <!-- Wind / compressed air -->
-    <path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2" />
-    <path d="M9.6 4.6A2 2 0 1 1 11 8H2" />
-    <path d="M12.6 19.4A2 2 0 1 0 14 16H2" />
+    <!-- Manometer / Pressure gauge — DIN 2403 / industrial -->
+    <circle cx="12" cy="13" r="8" />
+    <path d="M4.5 13h2M12 5.5v2M19.5 13h-2" stroke-linecap="round" />
+    <path d="M12 13l-3.5-5" stroke-width="2" stroke-linecap="round" />
+    <circle cx="12" cy="13" r="1.5" fill="currentColor" stroke="none" />
 
   {:else if kind === 'power'}
     <!-- Lightning bolt / zap -->
@@ -97,6 +99,15 @@
     <rect x="7" y="7" width="10" height="14" rx="2.5" />
     <!-- O label -->
     <circle cx="12" cy="13" r="2.5" />
+
+  {:else if kind === 'ozone'}
+    <!-- O₃ molecule — three oxygen atoms in triangle (ozone / oxidizer) -->
+    <circle cx="12" cy="6" r="3" />
+    <circle cx="7" cy="17" r="3" />
+    <circle cx="17" cy="17" r="3" />
+    <line x1="10.8" y1="8.7" x2="8.2" y2="14.3" stroke-linecap="round" />
+    <line x1="13.2" y1="8.7" x2="15.8" y2="14.3" stroke-linecap="round" />
+    <line x1="10" y1="17" x2="14" y2="17" stroke-linecap="round" />
 
   {:else if kind === 'hotwater'}
     <!-- Heißwasser: drop + heat wisps (all within viewbox) -->

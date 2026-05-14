@@ -19,6 +19,7 @@ export const DEFAULT_LIBRARY: LibraryMedium[] = [
   { id: 'hydraulik',  de: 'Hydraulik',  en: 'Hydraulics'      },
   { id: 'vakuum',      de: 'Vakuum',      en: 'Vacuum'    },
   { id: 'sauerstoff',  de: 'Sauerstoff',  en: 'Oxygen'    },
+  { id: 'ozon',        de: 'Ozon',        en: 'Ozone'     },
   { id: 'heisswasser', de: 'Heißwasser',  en: 'Hot Water' },
 ];
 
