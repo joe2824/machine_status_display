@@ -42,26 +42,29 @@
 
   function activeMediumClass(de: string, en: string): string {
     const s = (de + ' ' + en).toLowerCase();
-    if (s.includes('druck') || s.includes('luft') || s.includes('air') || s.includes('pneum'))
-      return 'bg-blue-500/20 border-blue-500 text-blue-400';
-    if (s.includes('span') || s.includes('strom') || s.includes('power') || s.includes('elec') || s.includes('volt'))
-      return 'bg-red-500/20 border-red-500 text-red-400';
-    if (s.includes('stick') || s.includes('nitro') || s.includes('n2') || s.includes('n₂'))
-      return 'bg-yellow-500/20 border-yellow-500 text-yellow-400';
-    if (s.includes('sauerstoff') || s.includes('oxygen') || s.includes(' o2') || s.includes('o₂'))
-      return 'bg-cyan-500/20 border-cyan-500 text-cyan-400';
-    if (s.includes('kühl') || s.includes('cool'))
-      return 'bg-sky-400/20 border-sky-400 text-sky-300';
-    if (s.includes('wass') || s.includes('water'))
-      return 'bg-blue-400/20 border-blue-400 text-blue-300';
-    if (s.includes('dampf') || s.includes('steam') || s.includes('vapor'))
-      return 'bg-slate-400/20 border-slate-400 text-slate-300';
+    // DIN 2403 pipeline identification colors
     if (s.includes('hydraul'))
-      return 'bg-amber-600/20 border-amber-600 text-amber-500';
+      return 'bg-amber-500/20 border-amber-500 text-amber-400';       // RAL 1003 Signalgelb
+    if (s.includes('dampf') || s.includes('steam') || s.includes('vapor'))
+      return 'bg-slate-400/20 border-slate-400 text-slate-300';        // RAL 9006 Weißaluminium
     if (s.includes('vakuum') || s.includes('vacuum'))
-      return 'bg-violet-500/20 border-violet-500 text-violet-400';
+      return 'bg-violet-500/20 border-violet-500 text-violet-400';     // technical process
+    if (s.includes('druck') || s.includes('luft') || s.includes('air') || s.includes('pneum') || s.includes('compress'))
+      return 'bg-sky-500/20 border-sky-500 text-sky-400';              // RAL 5015 Himmelblau
+    if (s.includes('span') || s.includes('strom') || s.includes('power') || s.includes('elec') || s.includes('volt'))
+      return 'bg-yellow-400/20 border-yellow-400 text-yellow-300';     // ISO 7010 W012 — electrical warning
+    if (s.includes('stick') || s.includes('nitro') || s.includes('n2') || s.includes('n₂') || s.includes('inert'))
+      return 'bg-gray-500/20 border-gray-500 text-gray-400';           // RAL 9005 Tiefschwarz (adapted)
+    if (s.includes('ozon') || s.includes('ozone') || s.includes('o₃'))
+      return 'bg-purple-500/20 border-purple-500 text-purple-400';     // oxidizer — distinct from O2
+    if (s.includes('sauerstoff') || s.includes('oxygen') || s.includes(' o2') || s.includes('o₂'))
+      return 'bg-red-500/20 border-red-500 text-red-400';              // RAL 3000 Feuerrot
     if (s.includes('heiß') || s.includes('heiss') || s.includes('hot water'))
-      return 'bg-red-500/20 border-red-500 text-red-400';
+      return 'bg-orange-500/20 border-orange-500 text-orange-400';     // RAL 3001 Signalrot
+    if (s.includes('kühl') || s.includes('cool'))
+      return 'bg-blue-500/20 border-blue-500 text-blue-400';           // RAL 5019 Capriblau
+    if (s.includes('wass') || s.includes('water'))
+      return 'bg-green-500/20 border-green-500 text-green-400';        // RAL 6018 Gelbgrün
     return 'bg-teal-500/20 border-teal-500 text-teal-400';
   }
 

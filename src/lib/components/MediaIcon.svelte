@@ -14,12 +14,12 @@
     if (s.includes('span')   || s.includes('strom') || s.includes('power') ||
         s.includes('elec')   || s.includes('volt'))                                   return 'power';
     if (s.includes('stick')  || s.includes('nitro') || s.includes('n2') ||
-        s.includes('n₂')     || s.includes('inert'))                                  return 'nitrogen';
-    if (s.includes('ozon') || s.includes('ozone') || s.includes('o₃'))               return 'ozone';
+        s.includes('n₂') || s.includes('inert'))                                 return 'nitrogen';
+    if (s.includes('ozon') || s.includes('ozone') || s.includes('o₃'))          return 'ozone';
     if (s.includes('sauerstoff') || s.includes('oxygen') || s.includes(' o2') || s.includes('o₂'))
                                                                                       return 'oxygen';
-    if (s.includes('heiß')   || s.includes('heiss') || s.includes('hot water'))      return 'hotwater';
-    if (s.includes('kühl')   || s.includes('cool'))                                   return 'coolwater';
+    if (s.includes('hei\xdf')   || s.includes('heiss') || s.includes('hot water'))   return 'hotwater';
+    if (s.includes('k\xfchl')   || s.includes('cool'))                               return 'coolwater';
     if (s.includes('wass')   || s.includes('water'))                                  return 'water';
     return 'wrench';
   }
@@ -38,33 +38,33 @@
   aria-hidden="true"
 >
   {#if kind === 'air'}
-    <!-- Manometer / Pressure gauge — DIN 2403 / industrial -->
-    <circle cx="12" cy="13" r="8" />
-    <path d="M4.5 13h2M12 5.5v2M19.5 13h-2" stroke-linecap="round" />
-    <path d="M12 13l-3.5-5" stroke-width="2" stroke-linecap="round" />
-    <circle cx="12" cy="13" r="1.5" fill="currentColor" stroke="none" />
+    <!-- Manometer — DIN 2403, centered (12,12) r=9, y=3–21 -->
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3.5 12h2M12 3.5v2M20.5 12h-2" stroke-linecap="round" />
+    <path d="M12 12l-3.5-5" stroke-width="2" stroke-linecap="round" />
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
 
   {:else if kind === 'power'}
-    <!-- Lightning bolt / zap -->
-    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none" />
+    <!-- ISO 7010 W012 — Electrical hazard: equilateral triangle + lightning, y=3–22 -->
+    <path d="M12 3L2 22h20z" stroke-linejoin="round" />
+    <path d="M13 10l-2.5 5h3l-2.5 4" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" />
 
   {:else if kind === 'nitrogen'}
-    <!-- Hochdruckflasche N₂ — T-valve + cylinder -->
-    <path d="M8.5 2.5h7" stroke-linecap="round" />
+    <!-- ISO W026 — Pressurised gas: N2 cylinder x=6.5–17.5, y=2.5–21 -->
+    <path d="M8 2.5h8" stroke-linecap="round" />
     <line x1="12" y1="2.5" x2="12" y2="5" />
     <rect x="10" y="5" width="4" height="2" rx="1" />
-    <rect x="7" y="7" width="10" height="14" rx="2.5" />
-    <!-- N label -->
+    <rect x="6.5" y="7" width="11" height="14" rx="3" />
     <line x1="10" y1="11" x2="10" y2="15" />
     <line x1="14" y1="11" x2="14" y2="15" />
     <line x1="10" y1="11" x2="14" y2="15" />
 
   {:else if kind === 'water'}
-    <!-- Water droplet -->
+    <!-- Water droplet — classic Lucide shape -->
     <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
 
   {:else if kind === 'coolwater'}
-    <!-- Snowflake — Kühlwasser -->
+    <!-- Snowflake — DIN 2403 cooling, y=2–22 full fill -->
     <line x1="12" y1="2" x2="12" y2="22" />
     <line x1="2" y1="12" x2="22" y2="12" />
     <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
@@ -72,48 +72,44 @@
     <path d="m9 3 3 2 3-2M9 21l3-2 3 2M3 9l2 3-2 3M21 9l-2 3 2 3" />
 
   {:else if kind === 'steam'}
-    <!-- Steam: 3 S-curve wisps rising (quadratic bezier) -->
+    <!-- Steam wisps — DIN 2403, 3 S-curves y=3–21 -->
     <path d="M7 21Q5 18 7 15Q9 12 7 9Q5 6 7 3" stroke-linecap="round" />
     <path d="M12 21Q14 18 12 15Q10 12 12 9Q14 6 12 3" stroke-linecap="round" />
     <path d="M17 21Q15 18 17 15Q19 12 17 9Q15 6 17 3" stroke-linecap="round" />
 
   {:else if kind === 'hydraulic'}
-    <!-- Hydraulic cylinder with rod -->
-    <rect x="4" y="9" width="16" height="6" rx="1.5" />
-    <path d="M12 2v7" />
-    <path d="M12 15v7" />
-    <path d="M2 12h2M20 12h2" />
+    <!-- ISO 1219 hydraulic cylinder: closed end + body + piston + rod + ports -->
+    <path d="M2 9v6" stroke-width="3" stroke-linecap="round" />
+    <rect x="2" y="9" width="15" height="6" rx="1" />
+    <line x1="10" y1="9" x2="10" y2="15" />
+    <path d="M17 12h5" stroke-width="2.5" stroke-linecap="round" />
+    <path d="M6 6v3M13 6v3" stroke-linecap="round" />
+    <path d="M6 15v3M13 15v3" stroke-linecap="round" />
 
   {:else if kind === 'vacuum'}
-    <!-- Vakuum: pressure gauge at zero / needle on empty -->
+    <!-- Vacuum gauge — needle at empty/zero, centered (12,12) r=9 -->
     <circle cx="12" cy="12" r="9" />
     <path d="M7.5 16.5a7 7 0 0 1 9-9" stroke-linecap="round" />
     <path d="M12 12l-3.5-4" stroke-linecap="round" />
     <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
 
   {:else if kind === 'oxygen'}
-    <!-- Hochdruckflasche O₂ — T-valve + cylinder + O ring -->
-    <path d="M8.5 2.5h7" stroke-linecap="round" />
-    <line x1="12" y1="2.5" x2="12" y2="5" />
-    <rect x="10" y="5" width="4" height="2" rx="1" />
-    <rect x="7" y="7" width="10" height="14" rx="2.5" />
-    <!-- O label -->
-    <circle cx="12" cy="13" r="2.5" />
+    <!-- ISO 7010 W009 — Oxidising material: flame above circle, y=3–21 -->
+    <path d="M12 3c-1 2.5-3.5 4.5-3.5 7a3.5 3.5 0 0 0 7 0c0-2-1-3.5-2-5.5 0 1.5-.5 2.5-1.5 2.5z" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="17.5" r="4" />
 
   {:else if kind === 'ozone'}
-    <!-- O₃ molecule — three oxygen atoms in triangle (ozone / oxidizer) -->
-    <circle cx="12" cy="6" r="3" />
-    <circle cx="7" cy="17" r="3" />
-    <circle cx="17" cy="17" r="3" />
-    <line x1="10.8" y1="8.7" x2="8.2" y2="14.3" stroke-linecap="round" />
-    <line x1="13.2" y1="8.7" x2="15.8" y2="14.3" stroke-linecap="round" />
-    <line x1="10" y1="17" x2="14" y2="17" stroke-linecap="round" />
+    <!-- ISO W009 O₃ variant: double flame (stronger oxidizer than O₂) + circle -->
+    <path d="M9 3c-1 2-2.5 3-2.5 5a2.5 2.5 0 0 0 5 0c0-1.5-.8-2.5-1.5-4 0 1-.5 1.5-1 1.5z" fill="currentColor" stroke="none" />
+    <path d="M15 3c-1 2-2.5 3-2.5 5a2.5 2.5 0 0 0 5 0c0-1.5-.8-2.5-1.5-4 0 1-.5 1.5-1 1.5z" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="17.5" r="4" />
 
   {:else if kind === 'hotwater'}
-    <!-- Heißwasser: drop + heat wisps (all within viewbox) -->
-    <path d="M12 4.5l4.5 4.5a6.5 6.5 0 1 1-9 0l4.5-4.5z" />
-    <path d="M18 6c.8-1.2.8-2.5 0-3.5" stroke-linecap="round" />
-    <path d="M20.5 7.5c.8-1.2.8-2.5 0-3.5" stroke-linecap="round" />
+    <!-- Heißoberfläche (ISO W017 inspired): hot surface line + heat waves -->
+    <line x1="2" y1="21" x2="22" y2="21" stroke-width="2.5" stroke-linecap="round" />
+    <path d="M6 17Q4.5 14 6 11Q7.5 8 6 5" stroke-linecap="round" />
+    <path d="M12 17Q10.5 14 12 11Q13.5 8 12 5" stroke-linecap="round" />
+    <path d="M18 17Q16.5 14 18 11Q19.5 8 18 5" stroke-linecap="round" />
 
   {:else}
     <!-- Wrench — generic utility -->
