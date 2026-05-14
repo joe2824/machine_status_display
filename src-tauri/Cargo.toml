@@ -1,6 +1,6 @@
 [package]
 name = "machine_status_display"
-version = "0.1.1"
+version = "0.1.2"
 description = "Machine Status Display"
 authors = ["Joel Klein"]
 edition = "2021"
